@@ -2,7 +2,7 @@
 
 - Clonar repositório
     > 
-        git clone https://github.com/rothink/desafio-transaction.git
+        git clone https://github.com/rothink/desafio-transacao.git
 
 
 - Entrar no repositório clonado
