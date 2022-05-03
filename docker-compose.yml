@@ -1,0 +1,104 @@
+version: '3'
+services:
+
+  #PHP Service
+  app:
+    build:
+      context: .
+      dockerfile: docker/back/Dockerfile
+    image: digitalocean.com/php
+    container_name: picpay_back
+    restart: unless-stopped
+    tty: true
+    env_file:
+      - back/.env.exemple
+    environment:
+      SERVICE_NAME: back
+      SERVICE_TAGS: dev
+    working_dir: /var/www
+    volumes:
+      - ./back:/var/www
+      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    networks:
+      - app-network
+
+  #Nginx Service
+  webserver:
+    image: nginx:alpine
+    container_name: picpay_webserver
+    restart: unless-stopped
+    tty: true
+    env_file:
+      - front/.env.exemple
+    ports:
+      - "8000:80"
+      - "443:443"
+    volumes:
+      - ./back:/var/www
+      - ./docker/nginx/conf.d/:/etc/nginx/conf.d/
+    networks:
+      - app-network
+
+  #MySQL Service
+  db:
+    image: mysql:8
+    container_name: picpay_db
+    restart: unless-stopped
+    tty: true
+    expose:
+      - "3306"
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: desafio
+      MYSQL_ROOT_PASSWORD: root
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    volumes:
+      - dbdata:/var/lib/mysql
+    networks:
+      - app-network
+
+  composer:
+    container_name: picpay_composer
+    restart: 'no'
+    depends_on:
+      - app
+    image: composer:2
+    command: install --no-interaction --ignore-platform-req=php
+    volumes:
+      - ./back:/var/www
+    working_dir: /var/www
+    networks:
+      - app-network
+
+  front:
+    container_name: picpay_front
+    build:
+      context: .
+      dockerfile: docker/front/Dockerfile
+    volumes:
+      - ./front:/app
+      - /app/node_modules
+    environment:
+      - npm_config_unsafe_perm=true
+    env_file:
+      - front/.env.exemple
+    networks:
+      - app-network
+    ports:
+      - "8080:8080"
+
+#Docker Networks
+networks:
+  app-network:
+    driver: bridge
+#Volumes
+volumes:
+  dbdata:
+    driver: local
+
+
+#https://www.digitalocean.com/community/tutorials/how-to-set-up-laravel-nginx-and-mysql-with-docker-compose-pt
+#https://br.vuejs.org/v2/cookbook/dockerize-vuejs-app.html#Exemplo-Base
+#https://mherman.org/blog/dockerizing-a-vue-app/
